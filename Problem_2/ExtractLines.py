@@ -10,6 +10,7 @@
 
 # Imports
 import numpy as np
+from numpy.core.defchararray import split
 from PlotFunctions import *
 
 
@@ -66,6 +67,7 @@ def ExtractLines(RangeData, params):
 
     N_lines = alpha.size
 
+
     ### Compute endpoints/lengths of the segments ###
     segend = np.zeros((N_lines, 4))
     seglen = np.zeros(N_lines)
@@ -117,6 +119,27 @@ def SplitLinesRecursive(theta, rho, startIdx, endIdx, params):
     '''
     ########## Code starts here ##########
 
+
+    alpha, r = FitLine(theta[startIdx:endIdx], rho[startIdx:endIdx])
+
+    if endIdx - startIdx <= params['MIN_POINTS_PER_SEGMENT']:
+        return alpha, r, np.array([startIdx, endIdx])
+    
+    s = FindSplit(theta[startIdx:endIdx], rho[startIdx:endIdx], alpha, r, params)
+    
+
+    if s < 0:
+        return alpha, r, np.array([startIdx, endIdx])
+
+    
+    alpha1, r1, i1 = SplitLinesRecursive(theta, rho, startIdx, startIdx+s, params)
+    alpha2, r2, i2 = SplitLinesRecursive(theta, rho, startIdx+s, endIdx, params)
+
+    alpha = np.vstack((alpha1, alpha2))
+    r = np.vstack((r1, r2))
+    idx = np.vstack((i1, i2))
+
+
     ########## Code ends here ##########
     return alpha, r, idx
 
@@ -141,6 +164,17 @@ def FindSplit(theta, rho, alpha, r, params):
     '''
     ########## Code starts here ##########
 
+    dif_vec = abs(rho*np.cos(theta - alpha) - r)
+    print(dif_vec)
+
+    if len(theta) <= 2 * params['MIN_POINTS_PER_SEGMENT']:
+        splitIdx = -1
+    else:
+        splitIdx = np.argmax(dif_vec[params['MIN_POINTS_PER_SEGMENT']:-params['MIN_POINTS_PER_SEGMENT']]) + params['MIN_POINTS_PER_SEGMENT']
+
+    if dif_vec[splitIdx] < params['LINE_POINT_DIST_THRESHOLD']:
+        splitIdx = -1
+    
     ########## Code ends here ##########
     return splitIdx
 
@@ -157,6 +191,21 @@ def FitLine(theta, rho):
         r: 'r' of best fit for range data (1 number) (m). Should be positive.
     '''
     ########## Code starts here ##########
+    N = len(theta)
+
+
+    
+    print("shape ", (rho*rho*np.sin(2*theta)).shape)
+    print("shape 2", (np.outer(rho, rho) * np.outer(np.cos(theta), np.sin(theta))).shape)
+    print("N ", N)
+
+    num = np.sum(rho*rho*np.sin(2*theta)) - (2/N) * np.sum(np.outer(rho, rho) * np.outer(np.cos(theta), np.sin(theta)))
+    denom = np.sum(rho*rho*np.cos(2*theta)) - (1/N) * np.sum(np.outer(rho, rho) * np.cos(theta*np.ones((N, N)) + (theta*np.ones((N, N))).T ))
+    
+    alpha = 0.5 * np.arctan2(num, denom) + np.pi/2
+
+    print("alpha {}".format(alpha))
+    r = (1/N)*np.sum(rho * np.cos(theta - alpha))
 
     ########## Code ends here ##########
     return alpha, r
@@ -184,6 +233,24 @@ def MergeColinearNeigbors(theta, rho, alpha, r, pointIdx, params):
     '''
     ########## Code starts here ##########
 
+    alphaOut = np.array([])
+#   
+    for j in range(0, pointIdx.shape[0]):
+        startIdx = pointIdx[i]
+        for i in range(j+1, pointIdx.shape[0]):
+            endIdx = pointIdx[i]
+
+            alpha2, r2 = FitLine(theta[startIdx:endIdx], rho[startIdx:endIdx])
+
+            splitIdx = FindSplit(theta[startIdx:endIdx], rho[startIdx:endIdx],alpha2, r2)
+
+            if splitIdx < -1:
+                alphaOut.append(alpha2)
+            
+
+
+        
+
     ########## Code ends here ##########
     return alphaOut, rOut, pointIdxOut
 
@@ -208,7 +275,7 @@ def main():
     # parameters for line extraction (mess with these!)
     MIN_SEG_LENGTH = 0.05  # minimum length of each line segment (m)
     LINE_POINT_DIST_THRESHOLD = 0.02  # max distance of pt from line to split
-    MIN_POINTS_PER_SEGMENT = 4  # minimum number of points per line segment
+    MIN_POINTS_PER_SEGMENT = 3  # minimum number of points per line segment
     MAX_P2P_DIST = 1.0  # max distance between two adjent pts within a segment
 
     # Data files are formated as 'rangeData_<x_r>_<y_r>_N_pts.csv
@@ -235,7 +302,7 @@ def main():
     ax = PlotRays(RangeData, ax)
     ax = PlotLines(segend, ax)
 
-    plt.show(ax)
+    plt.show()
 
 ############################################################
 
