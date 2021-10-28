@@ -73,6 +73,11 @@ class CameraCalibrator:
         '''
         ########## Code starts here ##########
 
+        print(u_meas)
+        print(v_meas)
+
+
+
         ########## Code ends here ##########
         return corner_coordinates
 
