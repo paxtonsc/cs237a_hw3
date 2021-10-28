@@ -106,13 +106,22 @@ class CameraCalibrator:
         """
         ########## Code starts here ##########
 
-        print(u_meas)
-        print(v_meas)
-
-
+        number = np.array(u_meas).shape[0]
+        u_w = np.arange(0, self.n_corners_x) * self.d_square
+        v_w = np.flip(np.arange(0, self.n_corners_y)) * self.d_square
+        U_w, V_w = np.meshgrid(u_w, v_w)
+​        
+        U_w = U_w.reshape(U_w.size)
+        V_w = V_w.reshape(V_w.size)
+​
+        Xg = [U_w] * number
+        Yg = [V_w] * number
+​
+        corner_coordinates = (Xg, Yg)
 
         ########## Code ends here ##########
         return corner_coordinates
+
 
     def estimateHomography(self, u_meas, v_meas, X, Y):  # Zhang Appendix A
         """
