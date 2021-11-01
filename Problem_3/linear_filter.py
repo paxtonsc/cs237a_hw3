@@ -4,6 +4,7 @@ import numpy as np
 import time
 import cv2
 import matplotlib.pyplot as plt
+from numpy.lib.arraypad import pad
 
 
 def corr(F, I):
@@ -16,8 +17,24 @@ def corr(F, I):
         G: An (m, n)-shaped ndarray containing the correlation of the filter with the image.
     """
     ########## Code starts here ##########
-    raise NotImplementedError("Implement me!")
+    m, n, c = I.shape
+    k, l, _ = F.shape
+
+    I_bar = np.zeros((m+k-1, n+l-1, c))
+
+    pad_width = int((k-1)//2)
+    I_bar[pad_width:-pad_width, pad_width:-pad_width,:] = I
+
+    G = np.zeros((m,n))
+
+    for i in range(m):
+        for j in range(n):
+            conv = I_bar[i:i+k,j:j+l,:]*F
+            G[i,j] = np.sum(conv)
+
     ########## Code ends here ##########
+
+    return G
 
 
 def norm_cross_corr(F, I):
@@ -30,7 +47,11 @@ def norm_cross_corr(F, I):
         G: An (m, n)-shaped ndarray containing the normalized cross-correlation of the filter with the image.
     """
     ########## Code starts here ##########
-    raise NotImplementedError("Implement me!")
+
+
+    #for i in range(m):
+    #    for j in range(n):
+
     ########## Code ends here ##########
 
 
@@ -46,6 +67,15 @@ def show_save_corr_img(filename, image, template):
 
 
 def main():
+
+    #paxFilter = (1/16)*np.array([[1, 2, 1], 
+    #                            [2, 4, 2],
+    #                            [1, 2, 1]])
+    #I = np.array([[1, 2, 3],
+    #            [4, 5, 6],
+    #            [7, 8, 9]])
+    #print(corr(paxFilter.reshape(*paxFilter.shape, -1), I.reshape(*I.shape, -1)))
+
     test_card = cv2.imread('test_card.png').astype(np.float32)
 
     filt1 = np.zeros((3, 3, 1))
