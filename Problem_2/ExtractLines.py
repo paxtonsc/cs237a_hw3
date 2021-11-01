@@ -165,7 +165,6 @@ def FindSplit(theta, rho, alpha, r, params):
     ########## Code starts here ##########
 
     dif_vec = abs(rho*np.cos(theta - alpha) - r)
-    print(dif_vec)
 
     if len(theta) <= 2 * params['MIN_POINTS_PER_SEGMENT']:
         splitIdx = -1
@@ -194,17 +193,13 @@ def FitLine(theta, rho):
     N = len(theta)
 
 
-    
-    print("shape ", (rho*rho*np.sin(2*theta)).shape)
-    print("shape 2", (np.outer(rho, rho) * np.outer(np.cos(theta), np.sin(theta))).shape)
-    print("N ", N)
+
 
     num = np.sum(rho*rho*np.sin(2*theta)) - (2/N) * np.sum(np.outer(rho, rho) * np.outer(np.cos(theta), np.sin(theta)))
     denom = np.sum(rho*rho*np.cos(2*theta)) - (1/N) * np.sum(np.outer(rho, rho) * np.cos(theta*np.ones((N, N)) + (theta*np.ones((N, N))).T ))
     
     alpha = 0.5 * np.arctan2(num, denom) + np.pi/2
 
-    print("alpha {}".format(alpha))
     r = (1/N)*np.sum(rho * np.cos(theta - alpha))
 
     ########## Code ends here ##########
@@ -233,24 +228,40 @@ def MergeColinearNeigbors(theta, rho, alpha, r, pointIdx, params):
     '''
     ########## Code starts here ##########
 
-    alphaOut = np.array([])
-#   
-    for j in range(0, pointIdx.shape[0]):
-        startIdx = pointIdx[i]
-        for i in range(j+1, pointIdx.shape[0]):
-            endIdx = pointIdx[i]
+    print("point idx: ", pointIdx)
 
-            alpha2, r2 = FitLine(theta[startIdx:endIdx], rho[startIdx:endIdx])
+    alphaOut = alpha
+    rOut = r
+    pointIdxOut = pointIdx
 
-            splitIdx = FindSplit(theta[startIdx:endIdx], rho[startIdx:endIdx],alpha2, r2)
+    alphaOut = []
+    rOut = []
+    pointIdxOut = []
+   
+    for j in range(1, pointIdx.shape[0]):
+        startIdx = pointIdx[j-1][0]
+        endIdx = pointIdx[j][1]
+        alpha2, r2 = FitLine(theta[startIdx:endIdx], rho[startIdx:endIdx])
+        splitIdx = FindSplit(theta[startIdx:endIdx], rho[startIdx:endIdx],alpha2, r2, params)
+        # if no split could be found and there is at least one more line segment to try and merge
+        if splitIdx < 0:
+            alpha[j] = alpha2
+            pointIdx[j] = (startIdx, endIdx)
+            r[j] = r2
+            print("found a merged line we could not split!")
 
-            if splitIdx < -1:
-                alphaOut.append(alpha2)
-            
-
+        else:
+            alphaOut.append(alpha[j-1])
+            pointIdxOut.append(pointIdx[j-1])
+            rOut.append(r[j-1])
+    
+    # append last point
+    alphaOut.append(alpha[j])
+    pointIdxOut.append(pointIdx[j])
+    rOut.append(r[j])
 
         
-
+    print(pointIdxOut)
     ########## Code ends here ##########
     return alphaOut, rOut, pointIdxOut
 
@@ -275,7 +286,7 @@ def main():
     # parameters for line extraction (mess with these!)
     MIN_SEG_LENGTH = 0.05  # minimum length of each line segment (m)
     LINE_POINT_DIST_THRESHOLD = 0.02  # max distance of pt from line to split
-    MIN_POINTS_PER_SEGMENT = 3  # minimum number of points per line segment
+    MIN_POINTS_PER_SEGMENT = 2  # minimum number of points per line segment
     MAX_P2P_DIST = 1.0  # max distance between two adjent pts within a segment
 
     # Data files are formated as 'rangeData_<x_r>_<y_r>_N_pts.csv
