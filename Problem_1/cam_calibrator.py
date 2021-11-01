@@ -110,13 +110,12 @@ class CameraCalibrator:
         u_w = np.arange(0, self.n_corners_x) * self.d_square
         v_w = np.flip(np.arange(0, self.n_corners_y)) * self.d_square
         U_w, V_w = np.meshgrid(u_w, v_w)
-​        
+
         U_w = U_w.reshape(U_w.size)
         V_w = V_w.reshape(V_w.size)
-​
+
         Xg = [U_w] * number
         Yg = [V_w] * number
-​
         corner_coordinates = (Xg, Yg)
 
         ########## Code ends here ##########
@@ -138,6 +137,34 @@ class CameraCalibrator:
         HINT: Some numpy functions that might come in handy are stack, vstack, hstack, column_stack, expand_dims, zeros_like, and ones_like.
         """
         ########## Code starts here ##########
+        # X shape = N by 1
+        # Y shape [N by 1]
+        # Construct M
+        M = np.array([X, Y, np.ones(self.n_corners_per_chessboard)])
+
+        # u meas shape N by 1
+        # v mease shape N by 1 (i.e. 63 by 1) where 63 = 9*7
+        print("u meas {}".format(u_meas.shape))
+
+        # Construct L:
+        L = np.zeros((2*self.n_corners_per_chessboard, 9))
+
+        print("tiled {}".format(np.tile(u_meas, (3,1)).T.shape))
+
+        L[0:self.n_corners_per_chessboard, 0:3] = M.T
+        L[0:self.n_corners_per_chessboard, 6:9] = -np.tile(u_meas, (3,1)).T * M.T
+
+        L[-self.n_corners_per_chessboard:, 3:6] = M.T
+        L[-self.n_corners_per_chessboard:, 6:9] = -np.tile(v_meas, (3,1)).T * M.T
+        
+        # Solve MLE by taking svd of L and extracting eigenvector corresponding to smallest singular value:
+        _, _, vh = np.linalg.svd(L)
+        h = vh[:,-1]
+        print("h", h.shape)
+        H = np.reshape(h, (3,3))
+        
+        # H is output as a 3 by 3
+        print(H.shape)
 
         ########## Code ends here ##########
         return H
@@ -155,6 +182,25 @@ class CameraCalibrator:
         HINT: What is the size of V?
         """
         ########## Code starts here ##########
+
+        def v(i,j):
+            return np.array([[H[:,i,0]*H[:,j,0], H[:,i,0]*H[:,j,1] + H[:,i,1]*H[:,j,0], H[:,i,1]*H[:,j,1], \
+            H[:,i,2]*H[:,j,0] + H[:,i,0]*H[:,j,2], H[:,i,2]*H[:,j,1] + H[:,i,1]*H[:,j,2], H[:,i,2]*H[:,j,2]]])
+
+        H = np.array(H)
+
+        # from section 3 of the pdf
+        v_12 = np.squeeze(v(1,2), axis=0)
+        v_11_minus_v_22 = np.squeeze(v(1,1) - v(2,2), axis=0)
+
+        print("v_12 shape {}".format(v_12.shape))
+        print("v_11_minus_v_22 {}".format(v_11_minus_v_22.shape))
+
+        V = np.vstack((v_12.T, v_11_minus_v_22.T))
+        print(V.shape)
+
+
+
 
         ########## Code ends here ##########
         return A
@@ -313,7 +359,7 @@ class CameraCalibrator:
             )
 
             plt.show(block=False)
-            plt.waitforbuttonpress()
+            #plt.waitforbuttonpress()
 
     def plotBoardLocations(self, X, Y, R, t, n_disp_img=1e5):
         # Expects X, U, R, t to be lists of arrays, just like u_meas, v_meas
