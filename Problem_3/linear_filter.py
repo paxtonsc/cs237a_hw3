@@ -49,8 +49,22 @@ def norm_cross_corr(F, I):
     ########## Code starts here ##########
 
 
-    #for i in range(m):
-    #    for j in range(n):
+    k, l, c = F.shape
+    m, n, _ = I.shape
+
+    I_bar = np.zeros((m+k-1, n+l-1, c))
+
+    pad_width = int((k-1)//2)
+    I_bar[pad_width:-pad_width, pad_width:-pad_width,:] = I
+
+    G = np.zeros((m,n))
+
+    for i in range(m):
+        for j in range(n):
+            t_ij = I_bar[i:i+k,j:j+l,:]
+            conv = F*t_ij
+            G[i,j] = np.sum(conv) / (np.linalg.norm(t_ij.reshape(-1))*np.linalg.norm(F.reshape(-1)))
+
 
     ########## Code ends here ##########
 
