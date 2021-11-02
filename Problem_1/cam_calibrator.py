@@ -118,6 +118,12 @@ class CameraCalibrator:
         Yg = [V_w] * number
         corner_coordinates = (Xg, Yg)
 
+        #print("corner coords X", corner_coordinates[0][0])
+        #print("U", u_meas[0])
+        #print("corner coords Y", corner_coordinates[0][1])
+        #print("V", v_meas[1])
+        #print()
+
         ########## Code ends here ##########
         return corner_coordinates
 
@@ -144,12 +150,12 @@ class CameraCalibrator:
 
         # u meas shape N by 1
         # v mease shape N by 1 (i.e. 63 by 1) where 63 = 9*7
-        print("u meas {}".format(u_meas.shape))
+        #print("u meas {}".format(u_meas.shape))
 
         # Construct L:
         L = np.zeros((2*self.n_corners_per_chessboard, 9))
 
-        print("tiled {}".format(np.tile(u_meas, (3,1)).T.shape))
+        #print("tiled {}".format(np.tile(u_meas, (3,1)).T.shape))
 
         L[0:self.n_corners_per_chessboard, 0:3] = M.T
         L[0:self.n_corners_per_chessboard, 6:9] = -np.tile(u_meas, (3,1)).T * M.T
@@ -159,12 +165,12 @@ class CameraCalibrator:
         
         # Solve MLE by taking svd of L and extracting eigenvector corresponding to smallest singular value:
         _, _, vh = np.linalg.svd(L)
-        h = vh[:,-1]
-        print("h", h.shape)
+        h = vh[-1]
+        #print("h", h.shape)
         H = np.reshape(h, (3,3))
         
         # H is output as a 3 by 3
-        print(H.shape)
+        #print("homo mat: ", H)
 
         ########## Code ends here ##########
         return H
@@ -183,24 +189,52 @@ class CameraCalibrator:
         """
         ########## Code starts here ##########
 
+        # flip coordinates to match paper
+        H = np.array(H).transpose(0,2,1)
+
         def v(i,j):
             return np.array([[H[:,i,0]*H[:,j,0], H[:,i,0]*H[:,j,1] + H[:,i,1]*H[:,j,0], H[:,i,1]*H[:,j,1], \
             H[:,i,2]*H[:,j,0] + H[:,i,0]*H[:,j,2], H[:,i,2]*H[:,j,1] + H[:,i,1]*H[:,j,2], H[:,i,2]*H[:,j,2]]])
 
-        H = np.array(H)
-
+        
         # from section 3 of the pdf
         v_12 = np.squeeze(v(1,2), axis=0)
         v_11_minus_v_22 = np.squeeze(v(1,1) - v(2,2), axis=0)
 
-        print("v_12 shape {}".format(v_12.shape))
-        print("v_11_minus_v_22 {}".format(v_11_minus_v_22.shape))
+       # print("v_12 shape {}".format(v_12.shape))
+        #print("v_11_minus_v_22 {}".format(v_11_minus_v_22.shape))
 
         V = np.vstack((v_12.T, v_11_minus_v_22.T))
-        print(V.shape)
+        #print("v shape {}".format(V.shape))
 
+        # the solution to Vb = 0 is the eigenvector of V.T * V assciated with the smallest eigenvalue
+        # of the right singular value associated with the smallest singular value
+        _, _, vh = np.linalg.svd(V)
+        b = vh[-1]
+        
+      #  print("dim of b {}. Should be length = 6".format(b.shape))
 
+        # indices of B 
+        # b = [11 12 22 13 23 33]
 
+        #print(b)
+        
+        # equations from appendix B
+        v0 = (b[1]*b[3] - b[0]*b[4]) / (b[0] * b[2] - b[1]**2)
+        lam = b[-1] - (b[3]**2 + v0 *(b[1]*b[3] - b[0]*b[4]))/b[0]
+        alpha = np.sqrt(lam/b[0])
+        #print("lambda", lam)
+        #print("needs to be positive", lam*b[0] / (b[0]*b[2] - b[1]**2))
+        beta = np.sqrt(lam*b[0] / (b[0]*b[2] - b[1]**2))
+        gamma = -b[1]*alpha**2 * beta/lam
+        u0 = lam * v0/beta - b[3]*alpha**2/lam
+
+        # alpha
+        A = np.array([[alpha, gamma, u0],
+                    [0, beta, v0],
+                    [0, 0, 1]])
+
+        print("A", A)
 
         ########## Code ends here ##########
         return A
@@ -215,6 +249,20 @@ class CameraCalibrator:
             t: the translation vector
         """
         ########## Code starts here ##########
+        r1 = np.linalg.inv(A)@H[0,:]/np.linalg.norm(np.linalg.inv(A)*H[0,:])
+        r2 = np.linalg.inv(A)@H[1,:]/np.linalg.norm(np.linalg.inv(A)*H[1,:])
+        r3 = np.cross(r1, r2)
+
+        t =  np.linalg.inv(A)@H[2,:]/np.linalg.norm(np.linalg.inv(A)*H[2,:])
+
+        Q = [r1, r2, r2]
+        #print(Q)
+        ## might need to transpose Q?
+        U, S, VT = np.linalg.svd(Q)
+        R = U@VT
+#
+        #print("h 0 shape {}".format(H[0,:].shape))
+        #print("dim of r1 r2 r3 t {} {} {} {}".format(r1.shape, r2.shape, r3.shape, t.shape))
 
         ########## Code ends here ##########
         return R, t
@@ -232,6 +280,12 @@ class CameraCalibrator:
 
         """
         ########## Code starts here ##########
+        M = [X, Y, Z, 1].T
+
+        m = np.vstack((R,t)).T@M
+
+        x = m[0]
+        y = m[1]
 
         ########## Code ends here ##########
         return x, y
@@ -249,6 +303,12 @@ class CameraCalibrator:
             u, v: the coordinates in the ideal pixel image plane
         """
         ########## Code starts here ##########
+
+        M = np.array([X, Y, Z, 1]).T
+        m = A@np.vstack((R,t)).T@M
+
+        u = m[0]
+        v = m[1]
 
         ########## Code ends here ##########
         return u, v
