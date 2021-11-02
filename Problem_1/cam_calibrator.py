@@ -145,7 +145,7 @@ class CameraCalibrator:
         ########## Code starts here ##########
         # X shape = N by 1
         # Y shape [N by 1]
-        # Construct M
+        # Construct M : 3 by N 
         M = np.array([X, Y, np.ones(self.n_corners_per_chessboard)])
 
         # u meas shape N by 1
@@ -156,12 +156,13 @@ class CameraCalibrator:
         L = np.zeros((2*self.n_corners_per_chessboard, 9))
 
         #print("tiled {}".format(np.tile(u_meas, (3,1)).T.shape))
+        print("M.T shape {} ".format(M.T.shape))
 
         L[0:self.n_corners_per_chessboard, 0:3] = M.T
-        L[0:self.n_corners_per_chessboard, 6:9] = -np.tile(u_meas, (3,1)).T * M.T
+        L[0:self.n_corners_per_chessboard, 6:9] = -np.diag(u_meas) @ M.T
 
         L[-self.n_corners_per_chessboard:, 3:6] = M.T
-        L[-self.n_corners_per_chessboard:, 6:9] = -np.tile(v_meas, (3,1)).T * M.T
+        L[-self.n_corners_per_chessboard:, 6:9] = -np.diag(v_meas) @ M.T
         
         # Solve MLE by taking svd of L and extracting eigenvector corresponding to smallest singular value:
         _, _, vh = np.linalg.svd(L)
@@ -193,6 +194,8 @@ class CameraCalibrator:
         H = np.array(H).transpose(0,2,1)
 
         def v(i,j):
+            i = i-1
+            j = j-1
             return np.array([[H[:,i,0]*H[:,j,0], H[:,i,0]*H[:,j,1] + H[:,i,1]*H[:,j,0], H[:,i,1]*H[:,j,1], \
             H[:,i,2]*H[:,j,0] + H[:,i,0]*H[:,j,2], H[:,i,2]*H[:,j,1] + H[:,i,1]*H[:,j,2], H[:,i,2]*H[:,j,2]]])
 
@@ -201,11 +204,11 @@ class CameraCalibrator:
         v_12 = np.squeeze(v(1,2), axis=0)
         v_11_minus_v_22 = np.squeeze(v(1,1) - v(2,2), axis=0)
 
-       # print("v_12 shape {}".format(v_12.shape))
-        #print("v_11_minus_v_22 {}".format(v_11_minus_v_22.shape))
+        print("v_12 shape {}".format(v_12.shape))
+        print("v_11_minus_v_22 {}".format(v_11_minus_v_22.shape))
 
         V = np.vstack((v_12.T, v_11_minus_v_22.T))
-        #print("v shape {}".format(V.shape))
+        print("v shape {}".format(V.shape))
 
         # the solution to Vb = 0 is the eigenvector of V.T * V assciated with the smallest eigenvalue
         # of the right singular value associated with the smallest singular value
@@ -227,7 +230,7 @@ class CameraCalibrator:
         #print("needs to be positive", lam*b[0] / (b[0]*b[2] - b[1]**2))
         beta = np.sqrt(lam*b[0] / (b[0]*b[2] - b[1]**2))
         gamma = -b[1]*alpha**2 * beta/lam
-        u0 = lam * v0/beta - b[3]*alpha**2/lam
+        u0 = gamma * v0/beta - b[3]*alpha**2/lam
 
         # alpha
         A = np.array([[alpha, gamma, u0],
@@ -235,6 +238,7 @@ class CameraCalibrator:
                     [0, 0, 1]])
 
         print("A", A)
+        print("resolution : ", self.w_pixels, self.h_pixels)
 
         ########## Code ends here ##########
         return A
@@ -249,16 +253,15 @@ class CameraCalibrator:
             t: the translation vector
         """
         ########## Code starts here ##########
-        r1 = np.linalg.inv(A)@H[0,:]/np.linalg.norm(np.linalg.inv(A)*H[0,:])
-        r2 = np.linalg.inv(A)@H[1,:]/np.linalg.norm(np.linalg.inv(A)*H[1,:])
+        r1 = np.linalg.inv(A)@H[:,0]/np.linalg.norm(np.linalg.inv(A)@H[:,0])
+        r2 = np.linalg.inv(A)@H[:,1]/np.linalg.norm(np.linalg.inv(A)@H[:,1])
         r3 = np.cross(r1, r2)
 
-        t =  np.linalg.inv(A)@H[2,:]/np.linalg.norm(np.linalg.inv(A)*H[2,:])
+        t =  np.linalg.inv(A)@H[:,2]/np.linalg.norm(np.linalg.inv(A)@H[:,0])
 
-        Q = [r1, r2, r2]
-        #print(Q)
-        ## might need to transpose Q?
-        U, S, VT = np.linalg.svd(Q)
+
+        Q = [r1, r2, r3]
+        U, _, VT = np.linalg.svd(Q)
         R = U@VT
 #
         #print("h 0 shape {}".format(H[0,:].shape))
@@ -284,8 +287,8 @@ class CameraCalibrator:
 
         m = np.vstack((R,t)).T@M
 
-        x = m[0]
-        y = m[1]
+        x = m[0]/m[2]
+        y = m[1]/m[2]
 
         ########## Code ends here ##########
         return x, y
@@ -307,8 +310,8 @@ class CameraCalibrator:
         M = np.array([X, Y, Z, 1]).T
         m = A@np.vstack((R,t)).T@M
 
-        u = m[0]
-        v = m[1]
+        u = m[0]/(m[2])
+        v = m[1]/(m[2])
 
         ########## Code ends here ##########
         return u, v
