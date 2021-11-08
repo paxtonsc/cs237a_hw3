@@ -261,9 +261,9 @@ class CameraCalibrator:
         t =  np.linalg.inv(A)@H[:,2] * lam
 
 
-        Q = [r1, r2, r3]
+        Q = np.array([r1, r2, r3]).T
         U, _, VT = np.linalg.svd(Q)
-        R = U@VT.T
+        R = U@VT
 #
         #print("h 0 shape {}".format(H[0,:].shape))
         #print("dim of r1 r2 r3 t {} {} {} {}".format(r1.shape, r2.shape, r3.shape, t.shape))
