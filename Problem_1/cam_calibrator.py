@@ -156,7 +156,8 @@ class CameraCalibrator:
         L = np.zeros((2*self.n_corners_per_chessboard, 9))
 
         #print("tiled {}".format(np.tile(u_meas, (3,1)).T.shape))
-        print("M.T shape {} ".format(M.T.shape))
+        #print("M.T shape {} ".format(M.T.shape))
+        print("about to make L")
 
         L[0:self.n_corners_per_chessboard, 0:3] = M.T
         L[0:self.n_corners_per_chessboard, 6:9] = -np.diag(u_meas) @ M.T
@@ -189,6 +190,7 @@ class CameraCalibrator:
         HINT: What is the size of V?
         """
         ########## Code starts here ##########
+        print("getting intrensics")
 
         # flip coordinates to match paper
         H = np.array(H).transpose(0,2,1)
@@ -253,6 +255,7 @@ class CameraCalibrator:
             t: the translation vector
         """
         ########## Code starts here ##########
+        print("getting extrensics")
         lam = 1/np.linalg.norm(np.linalg.inv(A)@H[:,0])
         r1 = np.linalg.inv(A)@H[:,0] * lam
         r2 = np.linalg.inv(A)@H[:,1] * lam
@@ -292,6 +295,9 @@ class CameraCalibrator:
         x = m[0]/m[2]
         y = m[1]/m[2]
 
+        print("x shape {} x type {}".format(x.shape, type(x)))
+        print("x shape {} x type {}".format(y.shape, type(y)))
+
         ########## Code ends here ##########
         return x, y
 
@@ -314,6 +320,9 @@ class CameraCalibrator:
 
         u = m[0]/(m[2])
         v = m[1]/(m[2])
+
+        #print("x shape {} x type {}".format(u.shape, type(u)))
+        #print("y shape {} y type {}".format(v.shape, type(v)))
 
         ########## Code ends here ##########
         return u, v
