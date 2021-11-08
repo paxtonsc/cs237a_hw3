@@ -192,9 +192,6 @@ def FitLine(theta, rho):
     ########## Code starts here ##########
     N = len(theta)
 
-
-
-
     num = np.sum(rho*rho*np.sin(2*theta)) - (2/N) * np.sum(np.outer(rho, rho) * np.outer(np.cos(theta), np.sin(theta)))
     denom = np.sum(rho*rho*np.cos(2*theta)) - (1/N) * np.sum(np.outer(rho, rho) * np.cos(theta*np.ones((N, N)) + (theta*np.ones((N, N))).T ))
     
@@ -228,11 +225,6 @@ def MergeColinearNeigbors(theta, rho, alpha, r, pointIdx, params):
     '''
     ########## Code starts here ##########
 
-    print("point idx: ", pointIdx)
-
-    alphaOut = alpha
-    rOut = r
-    pointIdxOut = pointIdx
 
     alphaOut = []
     rOut = []
@@ -260,8 +252,6 @@ def MergeColinearNeigbors(theta, rho, alpha, r, pointIdx, params):
     pointIdxOut.append(pointIdx[j])
     rOut.append(r[j])
 
-        
-    print(pointIdxOut)
     ########## Code ends here ##########
     return alphaOut, rOut, pointIdxOut
 
@@ -295,7 +285,7 @@ def main():
     #       N_pts is the number of beams (e.g. 180 -> beams are 2deg apart)
 
     filename = 'rangeData_5_5_180.csv'
-    # filename = 'rangeData_4_9_360.csv'
+    filename = 'rangeData_4_9_360.csv'
     # filename = 'rangeData_7_2_90.csv'
 
     # Import Range Data

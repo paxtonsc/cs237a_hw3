@@ -108,7 +108,7 @@ class CameraCalibrator:
 
         number = np.array(u_meas).shape[0]
         u_w = np.arange(0, self.n_corners_x) * self.d_square
-        v_w = np.flip(np.arange(0, self.n_corners_y)) * self.d_square
+        v_w = np.flip(np.arange(0, self.n_corners_y), axis=0) * self.d_square
         U_w, V_w = np.meshgrid(u_w, v_w)
 
         U_w = U_w.reshape(U_w.size)
@@ -253,14 +253,15 @@ class CameraCalibrator:
             t: the translation vector
         """
         ########## Code starts here ##########
-        r1 = np.linalg.inv(A)@H[:,0]/np.linalg.norm(np.linalg.inv(A)@H[:,0])
-        r2 = np.linalg.inv(A)@H[:,1]/np.linalg.norm(np.linalg.inv(A)@H[:,1])
+        lam = 1/np.linalg.norm(np.linalg.inv(A)@H[:,0])
+        r1 = np.linalg.inv(A)@H[:,0] * lam
+        r2 = np.linalg.inv(A)@H[:,1] * lam
         r3 = np.cross(r1, r2)
 
-        t =  np.linalg.inv(A)@H[:,2]/np.linalg.norm(np.linalg.inv(A)@H[:,0])
+        t =  np.linalg.inv(A)@H[:,2] * lam
 
 
-        Q = [r1, r2, r3]
+        Q = np.array([r1, r2, r3]).T
         U, _, VT = np.linalg.svd(Q)
         R = U@VT
 #
@@ -283,7 +284,7 @@ class CameraCalibrator:
 
         """
         ########## Code starts here ##########
-        M = [X, Y, Z, 1].T
+        M = np.array([X, Y, Z, 1]).T
 
         m = np.vstack((R,t)).T@M
 
