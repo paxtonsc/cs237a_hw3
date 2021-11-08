@@ -261,9 +261,10 @@ class CameraCalibrator:
         t =  np.linalg.inv(A)@H[:,2] * lam
 
 
-        Q = np.array([r1, r2, r3]).T
+        Q = np.array([r1, r2, r3])
         U, _, VT = np.linalg.svd(Q)
         R = U@VT
+        R = R.T
 #
         #print("h 0 shape {}".format(H[0,:].shape))
         #print("dim of r1 r2 r3 t {} {} {} {}".format(r1.shape, r2.shape, r3.shape, t.shape))
@@ -286,7 +287,7 @@ class CameraCalibrator:
         ########## Code starts here ##########
         M = np.array([X, Y, Z, 1]).T
 
-        m = np.vstack((R,t)).T@M
+        m = np.vstack((R.T,t)).T@M
 
         x = m[0]/m[2]
         y = m[1]/m[2]
@@ -309,7 +310,7 @@ class CameraCalibrator:
         ########## Code starts here ##########
 
         M = np.array([X, Y, Z, 1]).T
-        m = A@np.vstack((R,t)).T@M
+        m = A@np.vstack((R.T,t)).T@M
 
         u = m[0]/(m[2])
         v = m[1]/(m[2])
