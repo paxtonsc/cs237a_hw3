@@ -65,8 +65,9 @@ def norm_cross_corr(F, I):
             conv = F*t_ij
             G[i,j] = np.sum(conv) / (np.linalg.norm(t_ij.reshape(-1))*np.linalg.norm(F.reshape(-1)))
 
+    ########## Code ends here ##########\
 
-    ########## Code ends here ##########
+    return G
 
 
 def show_save_corr_img(filename, image, template):
