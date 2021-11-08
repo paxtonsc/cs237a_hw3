@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
 import os
@@ -162,7 +162,10 @@ class Detector:
         x = (u - self.cx)/self.fx
         y = (v - self.cy)/self.fy
         z = 1
-        x, y, z = (x,y,z)/np.linalg.norm(np.array([x,y,z]))
+        x = x/np.linalg.norm(np.array([x,y,z]))
+        y = y/np.linalg.norm(np.array([x,y,z]))
+        z = z/np.linalg.norm(np.array([x,y,z]))
+        # x, y, z = (x,y,z)/np.linalg.norm(np.array([x,y,z]))
         ########## Code ends here ##########
 
         return x, y, z
@@ -233,7 +236,8 @@ class Detector:
                 # estimate the corresponding distance using the lidar
                 dist = self.estimate_distance(thetaleft,thetaright,img_laser_ranges)
 
-                if not self.object_publishers.has_key(cl):
+                if cl not in self.object_publishers:
+                # if not self.object_publishers.has_key(cl):
                     self.object_publishers[cl] = rospy.Publisher('/detector/'+self.object_labels[cl],
                         DetectedObject, queue_size=10)
 
