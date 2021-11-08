@@ -157,7 +157,6 @@ class CameraCalibrator:
 
         #print("tiled {}".format(np.tile(u_meas, (3,1)).T.shape))
         #print("M.T shape {} ".format(M.T.shape))
-        print("about to make L")
 
         L[0:self.n_corners_per_chessboard, 0:3] = M.T
         L[0:self.n_corners_per_chessboard, 6:9] = -np.diag(u_meas) @ M.T
@@ -190,7 +189,6 @@ class CameraCalibrator:
         HINT: What is the size of V?
         """
         ########## Code starts here ##########
-        print("getting intrensics")
 
         # flip coordinates to match paper
         H = np.array(H).transpose(0,2,1)
@@ -206,11 +204,11 @@ class CameraCalibrator:
         v_12 = np.squeeze(v(1,2), axis=0)
         v_11_minus_v_22 = np.squeeze(v(1,1) - v(2,2), axis=0)
 
-        print("v_12 shape {}".format(v_12.shape))
-        print("v_11_minus_v_22 {}".format(v_11_minus_v_22.shape))
+        #print("v_12 shape {}".format(v_12.shape))
+        #print("v_11_minus_v_22 {}".format(v_11_minus_v_22.shape))
 
         V = np.vstack((v_12.T, v_11_minus_v_22.T))
-        print("v shape {}".format(V.shape))
+        #print("v shape {}".format(V.shape))
 
         # the solution to Vb = 0 is the eigenvector of V.T * V assciated with the smallest eigenvalue
         # of the right singular value associated with the smallest singular value
@@ -239,8 +237,8 @@ class CameraCalibrator:
                     [0, beta, v0],
                     [0, 0, 1]])
 
-        print("A", A)
-        print("resolution : ", self.w_pixels, self.h_pixels)
+        #print("A", A)
+        #print("resolution : ", self.w_pixels, self.h_pixels)
 
         ########## Code ends here ##########
         return A
@@ -255,7 +253,7 @@ class CameraCalibrator:
             t: the translation vector
         """
         ########## Code starts here ##########
-        print("getting extrensics")
+        #print("getting extrensics")
         lam = 1/np.linalg.norm(np.linalg.inv(A)@H[:,0])
         r1 = np.linalg.inv(A)@H[:,0] * lam
         r2 = np.linalg.inv(A)@H[:,1] * lam
@@ -288,15 +286,14 @@ class CameraCalibrator:
 
         """
         ########## Code starts here ##########
-        M = np.array([X, Y, Z, 1]).T
-
+        M = np.vstack((X, Y, Z, 1))
         m = np.vstack((R.T,t)).T@M
 
         x = m[0]/m[2]
         y = m[1]/m[2]
 
-        print("x shape {} x type {}".format(x.shape, type(x)))
-        print("x shape {} x type {}".format(y.shape, type(y)))
+        #print("x shape {} x type {}".format(x.shape, type(x)))
+        #print("x shape {} x type {}".format(y.shape, type(y)))
 
         ########## Code ends here ##########
         return x, y
@@ -315,7 +312,11 @@ class CameraCalibrator:
         """
         ########## Code starts here ##########
 
-        M = np.array([X, Y, Z, 1]).T
+        #M = np.array([X, Y, Z, 1]).T
+        #print(X.shape)
+        M = np.vstack((X, Y, Z, np.ones(X.size)))
+
+        #print(M.shape)
         m = A@np.vstack((R.T,t)).T@M
 
         u = m[0]/(m[2])
