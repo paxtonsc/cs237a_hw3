@@ -286,7 +286,7 @@ class CameraCalibrator:
 
         """
         ########## Code starts here ##########
-        M = np.vstack((X, Y, Z, 1))
+        M = np.vstack((X, Y, Z, np.ones(X.size)))
         m = np.vstack((R.T,t)).T@M
 
         x = m[0]/m[2]
